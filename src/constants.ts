@@ -3,15 +3,11 @@ export type Constant = {
     readonly Archer: number;
 };
 
-export const classDamageFactor: Constant = {
-    Archer: 0.89
-};
-
-export const classMainAttrFactor: Constant = {
+export const primaryAttrFactor: Constant = {
     Archer: 0.63
 };
 
-export const classSecondaryAttrFactor: Constant = {
+export const secondaryAttrFactor: Constant = {
     Archer: 0.175
 };
 
