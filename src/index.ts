@@ -41,25 +41,31 @@ let v = new Vue({
         characterClass: <Constants.CharacterClass>"Archer",
         target: <Constants.Target>"Devorak",
         str: 59, strDiff: 0,
-        dex: 508, dexDiff: 0,
+        dex: 516, dexDiff: 0,
         int: 25, intDiff: 0,
         luk: 27, lukDiff: 0,
-        weaponAttack: 1956, weaponAttackDiff: 0,
+        weaponAttack: 5868, weaponAttackDiff: 0,
         bonusAttack: 0, bonusAttackDiff: 0,
-        pmAttack: 365, pmAttackBonusDiff: 0, pmAttackBase: 237,
-        piercing: 19.5, piercingDiff: 0,
-        pmPiercing: 10.4, pmPiercingDiff: 0,
+        pmAttack: 396, pmAttackBonusDiff: 0, pmAttackBase: 237,
+        piercing: 20.2, piercingDiff: 0,
+        pmPiercing: 16.4, pmPiercingDiff: 0,
         accuracy: 93, accuracyDiff: 0,
         critRate: 209, critRateDiff: 0,
         critDamage: 125, critDamageDiff: 0,
-        damageBonus: 10.83, damageBonusDiff: 0
+        damageBonus: 19.5, damageBonusDiff: 0
     },
     computed: {
         pmAttackAttr: function() {
-            return Math.floor(this.pmAttackFromAttributes(this.dex, Constants.primaryAttrFactor[this.characterClass], this.str, Constants.secondaryAttrFactor[this.characterClass])) - this.pmAttackBase;
+            // TODO split up physical and magic, and handle picking major/minor better. (BUGBUG currently dex/str is hardcoded)
+            return Math.floor(this.characterClass === "Wizard" || this.characterClass === "Priest" || this.characterClass === "Soul Binder" ?
+            this.maFromInt(this.int) :
+            this.paFromAttributes(this.dex, this.str)) - this.pmAttackBase;
         },
         pmAttackAttrDiff: function() {
-            return Math.floor(this.pmAttackFromAttributes(this.dex + this.dexDiff, Constants.primaryAttrFactor[this.characterClass], this.str + this.strDiff, Constants.secondaryAttrFactor[this.characterClass])) - this.pmAttackBase - this.pmAttackAttr;
+            // TODO split up physical and magic, and handle picking major/minor better. (BUGBUG currently dex/str is hardcoded)
+            return Math.floor(this.characterClass === "Wizard" || this.characterClass === "Priest" || this.characterClass === "Soul Binder" ?
+            this.maFromInt(this.int + this.intDiff) :
+            this.paFromAttributes(this.dex + this.dexDiff, this.str + this.strDiff)) - this.pmAttackBase - this.pmAttackAttr;
         },
         pmAttackBonus: function() {
             return this.pmAttack - this.pmAttackAttr - this.pmAttackBase;
@@ -71,7 +77,7 @@ let v = new Vue({
             return this.damageFactor(this.weaponAttack, this.bonusAttack, this.pmAttack, this.damageBonus);
         },
         currentExpectedCritRate: function() {
-            return this.expectedCritRate(this.critRate, this.luk);
+            return this.expectedCritRate(this.critRate, this.luk, Constants.critEvasion[this.target]);
         },
         currentCritFactor: function() {
             return this.critFactor(this.currentExpectedCritRate, this.critDamage);
@@ -95,10 +101,10 @@ let v = new Vue({
             return this.damageFactor(this.weaponAttack + this.weaponAttackDiff, this.bonusAttack + this.bonusAttackDiff, this.pmAttack + this.pmAttackDiff, this.damageBonus + this.damageBonusDiff);
         },
         compareExpectedCritRate: function() {
-            return this.expectedCritRate(this.critRate + this.critRateDiff, this.luk + this.lukDiff);
+            return this.expectedCritRate(this.critRate + this.critRateDiff, this.luk + this.lukDiff, Constants.critEvasion[this.target]);
         },
         compareCritFactor: function() {
-            return this.critFactor(this.compareExpectedCritRate, this.critDamage + this.critDamageDiff);
+            return this.critFactor(this.compareExpectedCritRate, this.critDamage + this.critDamageDiff/10);
         },
         compareAccuracyFactor: function() {
             return this.accuracyFactor();
@@ -120,14 +126,17 @@ let v = new Vue({
         }
     },
     methods: {
-        pmAttackFromAttributes(primary: number, primaryCoeff: number, secondary: number, secondaryCoeff: number) {
-            return primary * primaryCoeff + secondary * secondaryCoeff;
+        paFromAttributes(major: number, minor: number) {
+            return (major * Constants.paMajorFactor[this.characterClass] + minor * Constants.paMinorFactor[this.characterClass]) * 7;
+        },
+        maFromInt(int: number) {
+            return int * Constants.maIntFactor[this.characterClass] * 7;
         },
         damageFactor: function(weaponAttack: number, bonusAttack: number, pmAttack: number, damageBonus: number) {
             return (weaponAttack + bonusAttack) * pmAttack * (1 + damageBonus/100);
         },
-        expectedCritRate(critRate: number, luk: number) {
-            return critRate * Constants.critRateFactor[this.characterClass] + luk * Constants.lukFactor[this.characterClass];
+        expectedCritRate(critRate: number, luk: number, critEvasion: number) {
+            return (luk * Constants.critRateFactor[this.characterClass] + critRate * 5.3) / (critEvasion * 2) * 0.015;
         },
         critFactor(critRate: number, critDamage: number) {
             return 1 + critRate * (critDamage/100 - 1);
